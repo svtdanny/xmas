@@ -5,54 +5,88 @@ from PIL import Image
 import cv2
 import tensorflow as tf
 
+from flare_correction.remove_flare import BlareRemoval, apply_flare_model
+from color_correction.color_correction import wb_autocorrect
+
+from shadow_correction.shadow_models import *
 # from api.img2img import Img2ImgStub
 
 import numpy as np
 from flare_correction.remove_flare import BlareRemoval
 
+
+def handle_shadow(image):
+    if "model_restoration" in st.session_state:
+        model_restoration, model_detection = st.session_state["model_restoration"], st.session_state["model_detection"]
+    else:
+        model_restoration, model_detection = get_shadow_models()
+        st.session_state["model_restoration"], st.session_state["model_detection"] = model_restoration, model_detection
+
+    # refine вроде не существенно влияет на качество, но сильно замедляет
+    print(image[0,:10])
+    data = {
+        "image": cv2.resize(image, (512,512)),
+        "im_shape": image.shape,
+        "full_image": image
+    }
+    detector_output = run_detector(model_detection, data, refine=False)
+    data = {
+        "image": image,
+        "im_shape": image.shape,
+        "full_image": image
+    }
+    rgb_restored = run_shadowformer(model_restoration, data, detector_output)
+    out = rgb_restored.astype(np.uint8)[..., ::-1]
+    return out
+
 def draw_video_bytes(video, text, col):
     col.write(text)
     col.video(video, format="video/mp4")
 
-def apply_model(model, image):
-    ten_in = tf.convert_to_tensor(image)
+def apply_model(image):
+    image = np.asarray(image)
+    out = image
+    if "feature_color_correction" in st.session_state and st.session_state["feature_color_correction"]:
+        out = wb_autocorrect(out[..., ::-1])[..., ::-1]
 
-    out_tup = model.Process(ten_in)
-    out = out_tup[2]
-    out = np.array(out)*255
-    print(out[0, :10])
-    print(out.shape)
+    if "feature_shadow_correction" in st.session_state and st.session_state["feature_shadow_correction"]:
+        out = handle_shadow(image)
 
-    out = np.clip(out,0,255).astype(np.uint8)
+    if "feature_flare_correction" in st.session_state and st.session_state["feature_flare_correction"]:
+        cached_model = None
+        if "model_flare_corr" in st.session_state:
+            cached_model = st.session_state["model_flare_corr"]
+        out, cached_model = apply_flare_model(out, cached_model)
+        st.session_state["model_flare_corr"] = cached_model
+
     return out
 
 
 def app_handle_video(bytes_video):
     draw_video_bytes(bytes_video, "Original Video :camera:", col1)
-
-    # model = Img2ImgStub()
-    model = BlareRemoval()
     
     with tempfile.NamedTemporaryFile() as temp:
         temp.write(bytes_video.read())
         video_stream = cv2.VideoCapture(temp.name)
 
     out_frames = []
-    
-    count = 10000000000
+    fps = 30 # video_stream.get(cv2.CAP_PROP_FPS)
+    count = fps*10
     while count > 0:
         count-=1
         flag, frame = video_stream.read()
         if not flag:
             break
 
-        frame = apply_model(model, frame)
+        frame = apply_model(frame)
 
         out_frames.append(frame)
     if len(out_frames) == 0:
         return
+    fps = max(20,int(video_stream.get(cv2.CAP_PROP_FPS)/10*10))
+    # st.text(f"FPS: {fps}")
     height, width, layers = out_frames[0].shape
-    video = cv2.VideoWriter('/home/sivtsovdt/arcadia/ads/pytorch/embedding_model/tmp_video.mp4',cv2.VideoWriter_fourcc(*'MP4V'),20,(width,height))
+    video = cv2.VideoWriter('/home/sivtsovdt/arcadia/ads/pytorch/embedding_model/tmp_video.mp4',cv2.VideoWriter_fourcc(*'MP4V'),int(fps),(width,height))
     _ = [video.write(i) for i in out_frames]
     print("VIDEO", _)
     video.release()
@@ -62,6 +96,29 @@ def app_handle_video(bytes_video):
 
     # transformed_video_bytes = bytes_video
     draw_video_bytes(transformed_video_bytes, "Processed Video :camera:", col2)
+
+
+on = st.toggle('Цветокоррекция')
+if on:
+    # st.write('Цветокоррекция активирована!')
+    st.session_state["feature_color_correction"] = True
+else:
+    st.session_state["feature_color_correction"] = False
+
+on = st.toggle('Удаление теней')
+if on:
+    # st.write('Удаление теней активировано!')
+    st.session_state["feature_shadow_correction"] = True
+else:
+    st.session_state["feature_shadow_correction"] = False
+
+on = st.toggle('Удаление бликов')
+if on:
+    # st.write('Удаление бликов активировано!')
+    st.session_state["feature_flare_correction"] = True
+else:
+    st.session_state["feature_flare_correction"] = False
+
 
 col1, col2 = st.columns(2)
 

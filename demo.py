@@ -11,20 +11,23 @@ def update_options():
     st.session_state['someCustomText'] = "BUTTON: "+ st.session_state['someCustomText']
     # print("button click: ", st.session_state['someCustomText'])
 
-st.title('Image2Image demo')
+st.title('Демо команды \"DL бригада\"')
 
-numbers = st.empty()
-iter=0
-while True:
-    iter+=1
-    with numbers.container():
-        # print("KEYS: ", st.session_state['someCustomText'])
+st.text("Два режима слева - в одной на вход картинка, в другой видео")
+st.text("Выберите нужные алгоритмы за счет переключателей")
+st.text("Можно использовать сразу несколько режимов")
+# numbers = st.empty()
+# iter=0
+# while True:
+#     iter+=1
+#     with numbers.container():
+#         # print("KEYS: ", st.session_state['someCustomText'])
 
-        st.text(st.session_state['someCustomText'])
+#         st.text(st.session_state['someCustomText'])
 
-        st.button("update table", on_click=update_options, key="button_search_"+str(iter))
+#         st.button("update table", on_click=update_options, key="button_search_"+str(iter))
 
-    time.sleep(10)
+#     time.sleep(10)
 
 
 # import streamlit as st
