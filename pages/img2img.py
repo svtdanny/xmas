@@ -8,6 +8,8 @@ import numpy as np
 from flare_correction.remove_flare import BlareRemoval, apply_flare_model
 from color_correction.color_correction import wb_autocorrect
 
+from shadow_correction.shadow_models import *
+
 def draw_image(image, text, col):
     col.write(text)
     col.image(image)
@@ -17,8 +19,25 @@ def app_handle_image(bytesImage):
     draw_image(image_img, "Original Image :camera:", col1)
     image = np.asarray(image_img)
 
+    model_restoration, model_detection = get_shadow_models()
+    # refine вроде не существенно влияет на качество, но сильно замедляет
+    print(image[0,:10])
+    data = {
+        "image": cv2.resize(image, (512,512)),
+        "im_shape": image.shape,
+        "full_image": image
+    }
+    detector_output = run_detector(model_detection, data, refine=False)
+    data = {
+        "image": image,
+        "im_shape": image.shape,
+        "full_image": image
+    }
+    rgb_restored = run_shadowformer(model_restoration, data, detector_output)
+    out = rgb_restored.astype(np.uint8)[..., ::-1]
+    # print(out[0,:10])
     # out = apply_flare_model(image)
-    out = wb_autocorrect(image)
+    # out = wb_autocorrect(image[..., ::-1])[..., ::-1]
 
     out_img = Image.fromarray(out)
     draw_image(out_img, "Processed Image :camera:", col2)
