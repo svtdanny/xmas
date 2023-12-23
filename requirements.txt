@@ -1,0 +1,12 @@
+torch==2.1.2
+torchvision==0.16.2
+timm
+scikit-image
+scikit-learn
+scipy
+efficientnet-pytorch
+einops
+opencv-python
+pandas
+natsort
+numpy
