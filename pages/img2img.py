@@ -1,12 +1,11 @@
 import streamlit as st
 from PIL import Image
 
-import tensorflow as tf
 import numpy as np
 
 # from api.img2img import Img2ImgStub
 
-from flare_correction.remove_flare import BlareRemoval
+from flare_correction.remove_flare import BlareRemoval, apply_flare_model
 
 def draw_image(image, text, col):
     col.write(text)
@@ -15,20 +14,11 @@ def draw_image(image, text, col):
 def app_handle_image(bytesImage):
     image = Image.open(bytesImage)
     draw_image(image, "Original Image :camera:", col1)
-    # transformed_image = Img2ImgStub().process(image)
 
-    ten_in = tf.convert_to_tensor(np.asarray(image))
+    out = apply_flare_model(image)
 
-    model = BlareRemoval()
-    out_tup = model.Process(ten_in)
-    out = out_tup[2]
-    out = np.array(out)*255
-    print(out[0, :10])
-    print(out.shape)
-
-    out = Image.fromarray(np.clip(out,0,255).astype(np.uint8))
-
-    draw_image(out, "Processed Image :camera:", col2)
+    out_img = Image.fromarray(out)
+    draw_image(out_img, "Processed Image :camera:", col2)
 
 col1, col2 = st.columns(2)
 
