@@ -54,7 +54,7 @@ def load_optim(optimizer, weights):
     return lr
 
 def get_arch(opt):
-    from model import UNet,ShadowFormer
+    from ..model import UNet,ShadowFormer
     arch = opt.arch
 
     print('You choose '+arch+'...')

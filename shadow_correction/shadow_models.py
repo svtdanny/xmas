@@ -1,6 +1,6 @@
 import cv2
 import argparse
-import utils
+from . import utils
 from torch.utils.data import Dataset
 import numpy as np
 import torch
@@ -12,7 +12,7 @@ import os
 import torch.nn.functional as F
 import time
 import pydensecrf.densecrf as dcrf
-from sddnet import SDDNet
+from .sddnet import SDDNet
 
 cv2.setNumThreads(0)
 torch.cuda.set_device(0)
@@ -95,8 +95,8 @@ def crf_refine(img, annos):
 
 
 
-def get_shadow_models(shadowformer_weights='./checkpoints/ISTD_plus_model_latest.pth',
-                      detector_weights='./checkpoints/detector_sbu.ckpt'):
+def get_shadow_models(shadowformer_weights='shadow_correction/checkpoints/ISTD_plus_model_latest.pth',
+                      detector_weights='shadow_correction/checkpoints/detector_sbu.ckpt'):
 
     shadowformer_args = argparse.Namespace(
     tile=None, # можно тайлить не полный кадр
@@ -122,14 +122,13 @@ def get_shadow_models(shadowformer_weights='./checkpoints/ISTD_plus_model_latest
     return model_restoration, model_detection
 
 
-
 def run_detector(model, data, refine=False):
     image = torch.Tensor(data['image']).permute(2, 0, 1)[None].cuda() / 255.
     ans = model(image)
     h,w,c = data['im_shape']
     pred = F.interpolate(torch.sigmoid(ans['logit']), 
                                            size=(h,w), align_corners=True, 
-                                           mode='bilinear')[0][0].cpu().numpy() * 255
+                                           mode='bilinear')[0][0].cpu().detach().numpy() * 255
     if refine:
         pred = crf_refine(data['full_image'], pred.astype(np.uint8))
         
@@ -177,7 +176,7 @@ def run_shadowformer(model, data, detector_prediction):
                 W[..., h_idx:(h_idx + tile), w_idx:(w_idx + tile)].add_(out_patch_mask)
         rgb_restored = E.div_(W)
 
-    rgb_restored = torch.clamp(rgb_restored, 0, 1).cpu().numpy().squeeze().transpose((1, 2, 0)) * 255
+    rgb_restored = torch.clamp(rgb_restored, 0, 1).cpu().detach().numpy().squeeze().transpose((1, 2, 0)) * 255
 
     # Unpad the output
     rgb_restored = rgb_restored[:height, :width, :]
