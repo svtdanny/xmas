@@ -250,7 +250,7 @@ class BlareRemoval:
     return (input_image, pred_flare, pred_scene, pred_blend)
 
 def apply_flare_model(image):
-  ten_in = tf.convert_to_tensor(np.asarray(image))
+  ten_in = tf.convert_to_tensor(image)
 
   model = BlareRemoval()
   out_tup = model.Process(ten_in)
