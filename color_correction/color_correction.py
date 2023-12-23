@@ -1,7 +1,7 @@
 import numpy as np
 
-from colour_transfer_MKL.color_transfer_MKL import color_transfer_MKL
-from WB_sRGB.WB_sRGB_Python.classes.WBsRGB import WBsRGB
+from .colour_transfer_MKL.color_transfer_MKL import color_transfer_MKL
+from .WB_sRGB.WB_sRGB_Python.classes.WBsRGB import WBsRGB
 
 def image_asserts(image: np.array):
     assert image.dtype == np.uint8, "Image must be 8bit"
