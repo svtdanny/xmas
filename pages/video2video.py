@@ -24,19 +24,21 @@ def handle_shadow(image):
 
     # refine вроде не существенно влияет на качество, но сильно замедляет
     print(image[0,:10])
+    small_img = cv2.resize(image, (512,512))
     data = {
-        "image": cv2.resize(image, (512,512)),
-        "im_shape": image.shape,
-        "full_image": image
+        "image": small_img,
+        "im_shape": small_img.shape,
+        "full_image": small_img
     }
     detector_output = run_detector(model_detection, data, refine=False)
     data = {
-        "image": image,
-        "im_shape": image.shape,
-        "full_image": image
+        "image": small_img,
+        "im_shape": small_img.shape,
+        "full_image": small_img
     }
     rgb_restored = run_shadowformer(model_restoration, data, detector_output)
     out = rgb_restored.astype(np.uint8)[..., ::-1]
+    out = cv2.resize(out, (image.shape[1], image.shape[0]))
     return out
 
 def draw_video_bytes(video, text, col):
@@ -86,13 +88,13 @@ def app_handle_video(bytes_video):
     fps = max(20,int(video_stream.get(cv2.CAP_PROP_FPS)/10*10))
     # st.text(f"FPS: {fps}")
     height, width, layers = out_frames[0].shape
-    video = cv2.VideoWriter('/home/sivtsovdt/arcadia/ads/pytorch/embedding_model/tmp_video.mp4',cv2.VideoWriter_fourcc(*'MP4V'),int(fps),(width,height))
+    video = cv2.VideoWriter('tmp_video.mp4',cv2.VideoWriter_fourcc(*'MP4V'),int(fps),(width,height))
     _ = [video.write(i) for i in out_frames]
     print("VIDEO", _)
     video.release()
     video_stream.release()
 
-    transformed_video_bytes = open("/home/sivtsovdt/arcadia/ads/pytorch/embedding_model/tmp_video.mp4", "rb")
+    transformed_video_bytes = open("tmp_video.mp4", "rb")
 
     # transformed_video_bytes = bytes_video
     draw_video_bytes(transformed_video_bytes, "Processed Video :camera:", col2)

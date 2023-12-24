@@ -18,25 +18,28 @@ def handle_shadow(image):
     model_restoration, model_detection = get_shadow_models()
     # refine вроде не существенно влияет на качество, но сильно замедляет
     print(image[0,:10])
+    small_img = cv2.resize(image, (512,512))
     data = {
-        "image": cv2.resize(image, (512,512)),
-        "im_shape": image.shape,
-        "full_image": image
+        "image": small_img,
+        "im_shape": small_img.shape,
+        "full_image": small_img
     }
     detector_output = run_detector(model_detection, data, refine=False)
     data = {
-        "image": image,
-        "im_shape": image.shape,
-        "full_image": image
+        "image": small_img,
+        "im_shape": small_img.shape,
+        "full_image": small_img
     }
     rgb_restored = run_shadowformer(model_restoration, data, detector_output)
     out = rgb_restored.astype(np.uint8)[..., ::-1]
+    out = cv2.resize(out, (image.shape[1], image.shape[0]))
+    #out = detector_output.astype(np.uint8)
     return out
 
 def app_handle_image(bytesImage):
     image_img = Image.open(bytesImage)
     draw_image(image_img, "Изначальное изображение :camera:", col1)
-    image = np.asarray(image_img)
+    image = np.array(image_img)
     out = image
     if "feature_color_correction" in st.session_state and st.session_state["feature_color_correction"]:
         out = wb_autocorrect(out[..., ::-1])[..., ::-1]

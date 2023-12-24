@@ -11,7 +11,7 @@ from tqdm import tqdm
 import os
 import torch.nn.functional as F
 import time
-import pydensecrf.densecrf as dcrf
+# import pydensecrf.densecrf as dcrf
 from .sddnet import SDDNet
 
 cv2.setNumThreads(0)
@@ -124,7 +124,9 @@ def get_shadow_models(shadowformer_weights='shadow_correction/checkpoints/ISTD_p
 
 def run_detector(model, data, refine=False):
     image = torch.Tensor(data['image']).permute(2, 0, 1)[None].cuda() / 255.
-    ans = model(image)
+    with torch.autocast(device_type="cuda"):
+        print("IMG detector", image.shape)
+        ans = model(image)
     h,w,c = data['im_shape']
     pred = F.interpolate(torch.sigmoid(ans['logit']), 
                                            size=(h,w), align_corners=True, 
@@ -149,9 +151,10 @@ def run_shadowformer(model, data, detector_prediction):
     padw = W - width if width % img_multiple_of != 0 else 0
     rgb_noisy = F.pad(rgb_noisy, (0, padw, 0, padh), 'reflect')
     mask = F.pad(mask, (0, padw, 0, padh), 'reflect')
-
+    print("Shadow shape", rgb_noisy.shape)
     if model.shadowformer_args.tile is None:
-        rgb_restored = model(rgb_noisy, mask)
+        with torch.autocast(device_type="cuda"):
+            rgb_restored = model(rgb_noisy, mask)
     else:
         # test the image tile by tile
         b, c, h, w = rgb_noisy.shape
