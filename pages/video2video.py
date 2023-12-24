@@ -13,7 +13,7 @@ from shadow_correction.shadow_models import *
 
 import numpy as np
 from flare_correction.remove_flare import BlareRemoval
-
+import uuid
 
 def handle_shadow(image):
     if "model_restoration" in st.session_state:
@@ -73,7 +73,7 @@ def app_handle_video(bytes_video):
 
     out_frames = []
     fps = 30 # video_stream.get(cv2.CAP_PROP_FPS)
-    count = fps*10
+    count = fps*5
     while count > 0:
         count-=1
         flag, frame = video_stream.read()
@@ -88,14 +88,17 @@ def app_handle_video(bytes_video):
     fps = max(20,int(video_stream.get(cv2.CAP_PROP_FPS)/10*10))
     # st.text(f"FPS: {fps}")
     height, width, layers = out_frames[0].shape
-    video = cv2.VideoWriter('tmp_video.mp4',cv2.VideoWriter_fourcc(*'MP4V'),int(fps),(width,height))
+    filename = str(uuid.uuid4()) + '.mp4'
+    video = cv2.VideoWriter('/root/xmas/' + filename,cv2.VideoWriter_fourcc(*'MP4V'),int(fps),(width,height))
     _ = [video.write(i) for i in out_frames]
     print("VIDEO", _)
     video.release()
     video_stream.release()
 
-    transformed_video_bytes = open("tmp_video.mp4", "rb")
+    os.system("ffmpeg -i " + '/root/xmas/' + filename + " -y -vcodec libx264 " + '/root/xmas/f' + filename)
 
+    transformed_video_bytes = open('/root/xmas/f' + filename, "rb")
+    print("BYTES", transformed_video_bytes)
     # transformed_video_bytes = bytes_video
     draw_video_bytes(transformed_video_bytes, "Processed Video :camera:", col2)
 
@@ -125,9 +128,9 @@ else:
 col1, col2 = st.columns(2)
 
 uploaded_video = st.sidebar.file_uploader("Upload a video", type=["mp4"])
-# if uploaded_video is None:
-#     uploaded_file = open("static/example_video.mp4", "rb")
-#     uploaded_video = uploaded_file
+#if uploaded_video is None:
+#    uploaded_file = open("static/demo.mp4", "rb")
+#    uploaded_video = uploaded_file
 
 if uploaded_video is not None:
     app_handle_video(uploaded_video)
