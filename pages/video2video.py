@@ -52,7 +52,7 @@ def apply_model(image):
         out = wb_autocorrect(out[..., ::-1])[..., ::-1]
 
     if "feature_shadow_correction" in st.session_state and st.session_state["feature_shadow_correction"]:
-        out = handle_shadow(image)
+        out = handle_shadow(out)
 
     if "feature_flare_correction" in st.session_state and st.session_state["feature_flare_correction"]:
         cached_model = None
